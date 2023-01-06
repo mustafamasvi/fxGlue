@@ -1,19 +1,17 @@
 import { Glue } from './Glue';
-import { glueGetWebGLContext } from './GlueUtils';
+import { glueGet2dContext } from './GlueUtils';
 
-export class GlueCanvas {
+export class GlueCanvas2D {
   readonly canvas: HTMLCanvasElement;
-  readonly glue: Glue;
-  readonly gl: WebGLRenderingContext;
+  readonly gl: CanvasRenderingContext2D;
 
   /**
    * Creates a new canvas and a new Glue instance.
    */
   constructor(options?: WebGLContextAttributes) {
     this.canvas = document.createElement('canvas');
-    this.canvas.id = "glueWebGlCanvas"
-    this.gl = glueGetWebGLContext(this.canvas, options);
-    this.glue = new Glue(this.gl);
+    this.canvas.id = "glue2dCanvas"
+    this.gl = glueGet2dContext(this.canvas, options);
   }
 
   /**
@@ -24,6 +22,5 @@ export class GlueCanvas {
   setSize(width: number, height: number): void {
     this.canvas.width = width;
     this.canvas.height = height;
-    this.glue.setSize(width, height);
   }
 }

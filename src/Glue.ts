@@ -20,6 +20,7 @@ export class Glue {
   private _currentFramebuffer = 0;
   private _final = false;
   private _disposed = false;
+  private _canvas2d:any = null; 
 
   /**
    * Create a new Glue instance around a given WebGL context.
@@ -34,6 +35,15 @@ export class Glue {
     // Create two framebuffers to be swapped during rendering.
     this.addFramebuffer();
     this.addFramebuffer();
+  }
+
+
+  addCanvas2d(gl: CanvasRenderingContext2D){
+    this._canvas2d = gl;
+  }
+
+  getCanvas2d(){
+    return this._canvas2d;
   }
 
   /**
@@ -269,6 +279,10 @@ export class Glue {
 
     for (const texture of Object.values(this._textures)) {
       texture.dispose();
+    }
+
+    if(this._canvas2d){
+      this._canvas2d.clearRect(0, 0, this._canvas2d.canvas.width, this._canvas2d.canvas.height);
     }
 
     this._renderFramebuffers = [];

@@ -30,7 +30,10 @@
     "prepare": "npm run build",
     "test": "jest --passWithNoTests",
     "build": "tsc",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "clean": "if exist lib ( rd /S /Q lib)",
+    "updateLink": "npm run clean && npm run build && npm rm fxglue -g && npm link"
+  
   },
   "repository": {
     "type": "git",

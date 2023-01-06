@@ -2,7 +2,6 @@ export type GlueSourceType =
   | HTMLImageElement
   | HTMLVideoElement
   | HTMLCanvasElement;
-
 /**
  * Check if WebGL is available in the current browser.
  * @returns Whether WebGL is available or not.
@@ -47,6 +46,24 @@ export function glueGetWebGLContext(
 }
 
 /**
+ * Get a WebGL context from a given canvas.
+ * @returns The WebGL context.
+ */
+export function glueGet2dContext(
+  canvas: HTMLCanvasElement,
+  options?: CanvasRenderingContext2DSettings
+): CanvasRenderingContext2D {
+  const context = 
+    canvas.getContext('2d', options) 
+
+  if (!context) {
+    throw new Error('WebGL is not available.');
+  }
+
+  return context as CanvasRenderingContext2D;
+}
+
+/**
  * Check if the source is loaded.
  * @param source The source image or video.
  * @returns Whether the source is loaded or not.
@@ -60,7 +77,10 @@ export function glueIsSourceLoaded(source: GlueSourceType): boolean {
     return source.complete && source.naturalHeight > 0;
   } else if (source instanceof HTMLVideoElement) {
     return source.readyState > 2;
-  }
+  } 
+  // else if (source instanceof HTMLInputElement) {
+  //    return true;
+  //  }
 
   return true;
 }
@@ -80,6 +100,9 @@ export function glueGetSourceDimensions(
   } else if (source instanceof HTMLCanvasElement) {
     return [source.width, source.height];
   }
+  // else if( source instanceof HTMLInputElement) {
+  //   return [source.width/2, source.height/2];
+  // }
 
   throw new Error('Unable to get source dimensions.');
 }
