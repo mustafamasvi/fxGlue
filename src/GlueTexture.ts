@@ -1,5 +1,6 @@
 import { Glue } from './Glue';
-import { GlueBlendMode } from './GlueShaderSources';
+import { GlueProgram } from './GlueProgram';
+import { blendFragmentShaders, defaultFragmentShader, defaultVertexShader, GlueBlendMode } from './GlueShaderSources';
 import {
   glueIsSourceLoaded,
   glueGetSourceDimensions,
@@ -51,6 +52,8 @@ export class GlueTexture {
   private _height: number;
   private _disposed = false;
   private _texture: WebGLTexture;
+  private _programs: Record<string, GlueProgram> = {};
+  private _imports: Record<string, string> = {};
 
   /**
    * Creates a new GlueTexture instance.
@@ -81,10 +84,17 @@ export class GlueTexture {
       _source
     );
 
+    this.registerProgram('~default');
+    for (const mode of Object.values(GlueBlendMode) as GlueBlendMode[]) {
+      this.registerProgram('~blend_' + mode, blendFragmentShaders[mode]);
+    }
+    
     this._texture = texture;
     const [width, height] = glueGetSourceDimensions(_source);
     this._width = width;
     this._height = height;
+
+    this.program('~default')?.apply();
   }
 
   /**
@@ -107,7 +117,7 @@ export class GlueTexture {
       size = [width, height];
     }
 
-    const blendProgram = this.glue.program('~blend_' + mode);
+    const blendProgram = this.program('~blend_' + mode);
 
     if (!blendProgram) {
       throw new Error('Invalid blend mode.');
@@ -160,6 +170,69 @@ export class GlueTexture {
   }
 
   /**
+   * Creates and registers a WeBGL program for a later use.
+   * NOTE: Glue uses a preprocessor for its GLSL programs.
+   * Consult the documentation for more information.
+   * Program names must not start with "~".
+   * @param name Program name (must not be registered already).
+   * @param fragmentShader Glue-compatible GLSL fragment shader code.
+   * @param vertexShader Glue-compatible GLSL vertex shader code.
+   * @returns A new GlueProgram instance.
+   */
+  registerProgram(
+    name: string,
+    fragmentShader?: string,
+    vertexShader?: string
+  ): GlueProgram {
+    this.checkDisposed();
+
+    if (this._programs[name]) {
+      throw new Error('A program with this name already exists: ' + name);
+    }
+
+    const program = new GlueProgram(
+      this.gl,
+      this.glue,
+      fragmentShader || defaultFragmentShader,
+      vertexShader || defaultVertexShader,
+      this._imports
+    );
+
+    this._programs[name] = program;
+    return program;
+  }
+
+  /**
+   * Removes a program from registered programs and disposes it.
+   * @param name Name of the registered program.
+   */
+  deregisterProgram(name: string): void {
+    this.checkDisposed();
+
+    this._programs[name]?.dispose();
+    delete this._programs[name];
+  }
+
+  /**
+   * Checks if a registered program with a given name is available.
+   * @param name Name of the registered program.
+   * @returns Whether the program is available or not.
+   */
+  hasProgram(name: string): boolean {
+    return !!this._programs[name];
+  }
+
+   /**
+   * Retrieves a registered program with a given name.
+   * @param name Name of the registered program.
+   * @returns A GlueProgram instance or undefined if there is no program with such name.
+   */
+   program(name: string): GlueProgram | undefined {
+    this.checkDisposed();
+    return this._programs[name];
+  }
+
+  /**
    * Selects and binds the current texture to TEXTURE1 or target.
    * @param target gl.TEXTURE1 to gl.TEXTURE32 (default: gl.TEXTURE1).
    */
@@ -170,6 +243,28 @@ export class GlueTexture {
     gl.activeTexture(target || gl.TEXTURE1);
 
     gl.bindTexture(gl.TEXTURE_2D, this._texture);
+  }
+
+   /**
+   * Registers a GLSL partial as an import to be used with the @use syntax.
+   * Unlike other register functions, this will replace the currently registered import with the same name.
+   * @param name Name of the partial.
+   * @param source Source of the partial.
+   */
+   registerImport(name: string, source: string): void {
+    this.checkDisposed();
+
+    this._imports[name] = source;
+  }
+
+  /**
+   * Removes a GLSL partial from registered imports
+   * @param name Name of the partial.
+   */
+  deregisterImport(name: string): void {
+    this.checkDisposed();
+
+    delete this._imports[name];
   }
 
   /**
